@@ -280,12 +280,24 @@ async function setupSave(){
   const btn=document.getElementById('setup-btn');btn.textContent='Connecting…';btn.disabled=true;
   try{
     key=k;
-    // Validate by listing bins (lightweight read operation)
-    await fetch(API+'/b',{headers:{'X-Master-Key':k}}).then(async r=>{
-      if(!r.ok){const t=await r.text();throw new Error(r.status+': '+t)}
+    // Validate by creating today's bin immediately — kills two birds with one stone
+    const testPayload={_v:1,_src:'dayplanner',date:iso(),dayStart:'08:00',loc:'',blocks:[],custom:[]};
+    const r=await fetch(API+'/b',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Master-Key':k},
+      body:JSON.stringify(testPayload)
     });
+    if(!r.ok){const t=await r.text();throw new Error(r.status+': '+t)}
+    const data=await r.json();
+    // Store the key and the bin we just created
     localStorage.setItem(LK,k);
-    startApp();
+    loadIdx();
+    idx[iso()]=data.metadata.id;
+    saveIdx();
+    curDate=iso();
+    curBin=data.metadata.id;
+    day={...testPayload};
+    startApp(true);
   }catch(e){
     console.error('Setup error:',e);
     err.textContent='Could not connect ('+e.message+'). Check your Master Key and try again.';
@@ -294,10 +306,11 @@ async function setupSave(){
   }
 }
 
-function startApp(){
+function startApp(skipLoad){
   document.getElementById('setup-wrap').classList.add('hidden');
   document.getElementById('app-wrap').classList.remove('hidden');
-  loadIdx();loadDay(iso());
+  if(!skipLoad){loadIdx();loadDay(iso());}
+  else render();
 }
 
 window.addEventListener('load',()=>{
