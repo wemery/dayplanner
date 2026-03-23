@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Day Planner</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f7f6f2;--surface:#fff;--border:#e4e2d8;--border2:#d0cec2;
+  --text:#1c1b18;--text2:#6b6960;--text3:#a09e97;
+  --accent:#2a5f4f;--accent-l:#e6f2ee;
+  --radius:12px;--radius-sm:7px;
+  --shadow:0 1px 4px rgba(0,0,0,.08);--shadow-md:0 4px 16px rgba(0,0,0,.12);
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --sb:env(safe-area-inset-bottom,0px);
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;min-height:100vh;padding-bottom:calc(80px + var(--sb))}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;position:sticky;top:0;z-index:100}
+.h1{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.logo{font-size:20px;font-weight:700;color:var(--accent);letter-spacing:-.5px}
+.sync{font-size:11.5px;padding:3px 9px;border-radius:20px;font-weight:600;transition:all .3s}
+.s-idle{background:var(--bg);color:var(--text3)}
+.s-saving{background:#fef3c7;color:#92400e}
+.s-saved{background:var(--accent-l);color:var(--accent)}
+.s-error{background:#fef2f2;color:#dc2626}
+.day-sel-btn{padding:5px 11px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:600;border:1.5px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-family:var(--font)}
+#start-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#start-bar label{font-size:12.5px;font-weight:600;color:var(--text2);white-space:nowrap}
+#start-bar input{padding:5px 9px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--font);font-size:13.5px;background:var(--surface);color:var(--text);outline:none}
+#start-bar input:focus{border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font);font-size:13.5px;font-weight:600;border:none;cursor:pointer;transition:all .12s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.96)}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#235040}
+.btn-s{background:var(--surface);color:var(--text);border:1.5px solid var(--border2)}.btn-s:hover{background:var(--bg)}
+.btn-d{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.btn-sm{padding:5px 11px;font-size:12.5px}
+main{padding:14px 16px;max-width:680px;margin:0 auto}
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sec-hdr span{font-size:13px;font-weight:600;color:var(--text2)}
+#timeline{position:relative;margin-bottom:18px}
+.tl-empty{text-align:center;padding:40px 16px;color:var(--text3);font-size:14px}
+.tl-empty-icon{font-size:32px;margin-bottom:8px}
+.tl-spine{position:absolute;left:52px;top:0;bottom:0;width:2px;background:var(--border);z-index:0}
+.tl-gap{display:flex;align-items:center;padding:3px 0 3px 66px;position:relative;z-index:1}
+.tl-gap-lbl{font-size:11px;color:var(--text3);font-style:italic}
+.tl-blk{display:flex;align-items:flex-start;gap:12px;margin-bottom:5px;position:relative;z-index:1}
+.tl-tc{width:52px;flex-shrink:0;text-align:right;padding-top:12px}
+.tl-time{font-size:11.5px;font-weight:600;color:var(--text2);font-family:'SF Mono','Menlo',monospace}
+.tl-dot{width:11px;height:11px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);flex-shrink:0;margin-top:14px;box-shadow:0 0 0 2px var(--accent)}
+.tl-card{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;box-shadow:var(--shadow);cursor:pointer;transition:border-color .12s}
+.tl-card:hover{border-color:var(--accent)}
+.tl-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px}
+.tl-lbl{font-weight:600;font-size:14px;color:var(--text);flex:1}
+.tl-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.tl-dur{font-size:12px;color:var(--text2)}
+.tl-note{font-size:12.5px;color:var(--text2);font-style:italic;margin-top:4px;white-space:pre-wrap;word-break:break-word}
+.tl-ov{border-color:#f59e0b!important;background:#fffbeb}
+.ov-badge{font-size:11px;color:#92400e;background:#fef3c7;padding:1px 6px;border-radius:10px;font-weight:600}
+.t-rounds{background:#e0f2fe;color:#0369a1}
+.t-normal{background:#dcfce7;color:#15803d}
+.t-consult{background:#ede9fe;color:#6d28d9}
+.t-psycho{background:#fce7f3;color:#9d174d}
+.t-staff{background:#fff7ed;color:#c2410c}
+.t-admin{background:#f1f5f9;color:#475569}
+.t-phone{background:#cffafe;color:#0e7490}
+.t-advice{background:#fef9c3;color:#a16207}
+.t-resident{background:#f0fdf4;color:#166534}
+.t-other{background:#f5f5f5;color:#525252}
+.t-custom{background:#f5f0ff;color:#5b21b6}
+#export-bar{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:var(--shadow)}
+#export-bar p{font-size:13px;color:var(--text2);flex:1}
+#fab{position:fixed;bottom:calc(20px + var(--sb));right:20px;width:52px;height:52px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(42,95,79,.4);display:flex;align-items:center;justify-content:center;z-index:200;transition:transform .12s;line-height:1;-webkit-tap-highlight-color:transparent}
+#fab:active{transform:scale(.92)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:flex;align-items:flex-end;backdrop-filter:blur(2px)}
+.overlay.hidden{display:none}
+.sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:680px;margin:0 auto;padding:18px 16px calc(18px + var(--sb));max-height:92vh;overflow-y:auto;box-shadow:0 -4px 24px rgba(0,0,0,.15)}
+.handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px}
+.sheet-title{font-size:16px;font-weight:700;margin-bottom:14px}
+.sheet-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.ff{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.ff label{font-size:12px;font-weight:600;color:var(--text2)}
+.ff input,.ff textarea,.ff select{padding:8px 10px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--font);font-size:14px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+.ff input:focus,.ff textarea:focus{border-color:var(--accent)}
+.ff textarea{resize:vertical;min-height:64px;line-height:1.5}
+.frow{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.frow>.ff{flex:1;min-width:110px;margin-bottom:0}
+.type-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:600;border:1.5px solid transparent;cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent;opacity:.6}
+.chip.on{opacity:1;border-color:currentColor}
+.chip:hover{opacity:1}
+.add-chip{padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:600;border:1.5px dashed var(--border2);background:none;color:var(--text3);cursor:pointer;font-family:var(--font);transition:all .12s}
+.add-chip:hover{border-color:var(--accent);color:var(--accent)}
+.day-item{display:flex;align-items:center;justify-content:space-between;padding:11px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px;cursor:pointer;background:var(--surface);transition:border-color .1s}
+.day-item:hover{border-color:var(--accent)}
+.day-item.active{border-color:var(--accent);background:var(--accent-l)}
+.setup{max-width:460px;margin:60px auto 0;padding:0 20px}
+.setup-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:26px 22px;box-shadow:var(--shadow-md)}
+.setup-card h2{font-size:20px;font-weight:700;margin-bottom:6px}
+.setup-card .sub{font-size:13.5px;color:var(--text2);margin-bottom:22px;line-height:1.6}
+.setup-card a{color:var(--accent)}
+.step{display:flex;gap:12px;margin-bottom:12px}
+.step-n{width:22px;height:22px;border-radius:50%;background:var(--accent);color:white;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-t{font-size:13.5px;color:var(--text2);line-height:1.6}
+.step-t strong{color:var(--text)}
+.err{font-size:12.5px;color:#dc2626;margin-top:5px}
+@media(min-width:520px){
+  .overlay{align-items:center}
+  .sheet{border-radius:16px;margin:20px auto;max-height:82vh}
+}
+</style>
+</head>
+<body>
+
+<div id="setup-wrap">
+  <div class="setup">
+    <div class="setup-card">
+      <h2>Welcome to Day Planner</h2>
+      <p class="sub">Syncs your de-identified day plan to the cloud so you can pick it up on any device. Uses <a href="https://jsonbin.io" target="_blank">JSONBin.io</a> — free, private, no patient data.</p>
+      <div style="margin-bottom:18px">
+        <div class="step"><div class="step-n">1</div><div class="step-t">Go to <a href="https://jsonbin.io" target="_blank">jsonbin.io</a> and sign up free.</div></div>
+        <div class="step"><div class="step-n">2</div><div class="step-t">Click <strong>API Keys</strong> in your dashboard and copy your <strong>Master Key</strong> (starts with <code>$2b$</code>).</div></div>
+        <div class="step"><div class="step-n">3</div><div class="step-t">Paste it below. Saved in this browser — only needs doing once per device.</div></div>
+      </div>
+      <div class="ff"><label>JSONBin Master Key</label><input type="password" id="setup-key" placeholder="$2b$10$..."></div>
+      <div class="err hidden" id="setup-err"></div>
+      <button class="btn btn-p" style="width:100%;margin-top:10px" id="setup-btn" onclick="setupSave()">Connect &amp; Start</button>
+    </div>
+  </div>
+</div>
+
+<div id="app-wrap" class="hidden">
+  <header>
+    <div class="h1">
+      <span class="logo">Day Planner</span>
+      <span class="sync s-idle" id="sync">● Ready</span>
+    </div>
+    <div class="h2">
+      <button class="day-sel-btn" id="day-btn" onclick="openDayModal()">…</button>
+      <button class="btn btn-p btn-sm" onclick="newDay()">+ New day</button>
+      <button class="btn btn-s btn-sm" onclick="exportJson()">↓ Export</button>
+    </div>
+  </header>
+
+  <div id="start-bar">
+    <label>Start:</label>
+    <input type="time" id="st-time" step="900" value="08:00">
+    <label>Location:</label>
+    <input type="text" id="st-loc" placeholder="e.g. Hospital…" style="flex:1;min-width:100px">
+  </div>
+
+  <main>
+    <div class="sec-hdr">
+      <span id="cnt-lbl">—</span>
+      <button class="btn btn-p btn-sm" onclick="openAdd()">+ Add block</button>
+    </div>
+    <div id="timeline">
+      <div class="tl-empty" id="tl-empty"><div class="tl-empty-icon">🗓</div><p>No blocks yet.<br>Tap "+ Add block" to start.</p></div>
+      <div class="tl-spine" id="tl-spine" style="display:none"></div>
+      <div id="tl-blocks"></div>
+    </div>
+    <div id="export-bar"><p>Done for the day? Export to import into WillBill.</p><button class="btn btn-p btn-sm" onclick="exportJson()">↓ Export JSON</button></div>
+  </main>
+  <button id="fab" onclick="openAdd()">+</button>
+</div>
+
+<!-- Block modal -->
+<div class="overlay hidden" id="blk-modal" onclick="bgc(event,'blk-modal')">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-title" id="blk-title">Add Block</div>
+    <div class="ff"><label>Label (no patient names)</label><input type="text" id="f-lbl" placeholder="e.g. Patient A, Rounds…" autocomplete="off"></div>
+    <div class="frow">
+      <div class="ff"><label>Start time</label><input type="time" id="f-st" step="900"></div>
+      <div class="ff"><label>End time</label><input type="time" id="f-et" step="900"></div>
+    </div>
+    <div class="ff" style="margin-bottom:6px"><label>Activity type</label><div class="type-grid" id="type-grid"></div></div>
+    <div class="ff"><label>Notes (no patient identifiers)</label><textarea id="f-notes" placeholder="e.g. Normal visit, ~60 min…"></textarea></div>
+    <div class="sheet-footer">
+      <button class="btn btn-d btn-sm" id="del-btn" style="display:none;margin-right:auto" onclick="delBlock()">Delete</button>
+      <button class="btn btn-s" onclick="cm('blk-modal')">Cancel</button>
+      <button class="btn btn-p" id="save-btn" onclick="saveBlock()">Add block</button>
+    </div>
+  </div>
+</div>
+
+<!-- Day modal -->
+<div class="overlay hidden" id="day-modal" onclick="bgc(event,'day-modal')">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-title">Select Day</div>
+    <div id="day-list"></div>
+    <div class="sheet-footer"><button class="btn btn-s" onclick="cm('day-modal')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Custom type modal -->
+<div class="overlay hidden" id="cust-modal" onclick="bgc(event,'cust-modal')">
+  <div class="sheet" style="max-height:240px">
+    <div class="handle"></div>
+    <div class="sheet-title">Add custom type</div>
+    <div class="ff"><label>Type name</label><input type="text" id="cust-inp" placeholder="e.g. Case conference…"></div>
+    <div class="sheet-footer"><button class="btn btn-s" onclick="cm('cust-modal')">Cancel</button><button class="btn btn-p" onclick="saveCust()">Add</button></div>
+  </div>
+</div>
+
+<script>
+const API='https://api.jsonbin.io/v3';
+const LK='dp_key', LI='dp_idx';
+const TYPES=[
+  {id:'rounds',l:'Rounds',c:'t-rounds'},
+  {id:'normal',l:'Normal visit',c:'t-normal'},
+  {id:'consult',l:'New consult',c:'t-consult'},
+  {id:'psycho',l:'Psychoeducation',c:'t-psycho'},
+  {id:'staff',l:'Staff discussion',c:'t-staff'},
+  {id:'admin',l:'Admin / paperwork',c:'t-admin'},
+  {id:'phone',l:'Phone / telehealth',c:'t-phone'},
+  {id:'advice',l:'Phone advice to physician',c:'t-advice'},
+  {id:'resident',l:'Review with resident',c:'t-resident'},
+  {id:'other',l:'Other',c:'t-other'},
+];
+let key='',idx={},curDate='',curBin=null;
+let day={date:'',dayStart:'08:00',loc:'',blocks:[],custom:[]};
+let selType='normal',editId=null,saveT=null,saving=false;
+
+function iso(){return new Date().toISOString().slice(0,10)}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function tm(t){if(!t)return null;const[h,m]=t.split(':').map(Number);return h*60+m}
+function mt(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
+function dur(s,e){const sm=tm(s),em=tm(e);if(sm==null||em==null||em<=sm)return '';const d=em-sm;if(d<60)return d+' min';const h=Math.floor(d/60),m=d%60;return m?h+'h '+m+'m':h+'h'}
+function fmtD(d){return new Date(d+'T00:00:00').toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'})}
+function allT(){return[...TYPES,...day.custom.map(t=>({id:'cx-'+t,l:t,c:'t-custom'}))]}
+function tInfo(id){return allT().find(t=>t.id===id)||{id,l:id,c:'t-other'}}
+
+function ss(st,msg){const e=document.getElementById('sync');e.className='sync s-'+st;e.textContent='● '+msg}
+
+async function api(path,method='GET',body=null){
+  const o={method,headers:{'Content-Type':'application/json','X-Master-Key':key}};
+  if(body)o.body=JSON.stringify(body);
+  const r=await fetch(API+path,o);
+  if(!r.ok){const t=await r.text();throw new Error(r.status+': '+t)}
+  return r.json();
+}
+async function mkBin(d){const r=await api('/b','POST',d);return r.metadata.id}
+async function putBin(id,d){await api('/b/'+id,'PUT',d)}
+async function getBin(id){const r=await api('/b/'+id+'/latest');return r.record}
+
+function saveIdx(){localStorage.setItem(LI,JSON.stringify(idx))}
+function loadIdx(){try{idx=JSON.parse(localStorage.getItem(LI)||'{}')}catch{idx={}}}
+
+function sched(){clearTimeout(saveT);ss('saving','Saving…');saveT=setTimeout(doSave,1200)}
+async function doSave(){
+  if(saving)return;saving=true;
+  try{
+    const p={...day,_v:1,_src:'dayplanner'};
+    if(curBin){await putBin(curBin,p)}
+    else{curBin=await mkBin(p);idx[curDate]=curBin;saveIdx()}
+    ss('saved','Saved ✓');setTimeout(()=>ss('idle','Ready'),2500);
+  }catch(e){ss('error','Save failed')}
+  saving=false;
+}
+
+async function loadDay(date){
+  curDate=date;curBin=idx[date]||null;
+  if(curBin){
+    ss('saving','Loading…');
+    try{const d=await getBin(curBin);day={date,dayStart:'08:00',loc:'',blocks:[],custom:[],...d};day.date=date;ss('saved','Loaded ✓');setTimeout(()=>ss('idle','Ready'),2000)}
+    catch{ss('error','Load failed');day={date,dayStart:'08:00',loc:'',blocks:[],custom:[]}}
+  }else{day={date,dayStart:'08:00',loc:'',blocks:[],custom:[]};ss('idle','New day')}
+  render();
+}
+
+async function setupSave(){
+  const k=document.getElementById('setup-key').value.trim();
+  const err=document.getElementById('setup-err');
+  err.classList.add('hidden');
+  if(!k){err.textContent='Please enter your API key';err.classList.remove('hidden');return}
+  const btn=document.getElementById('setup-btn');btn.textContent='Connecting…';btn.disabled=true;
+  try{
+    key=k;
+    // Validate by creating today's bin immediately — kills two birds with one stone
+    const testPayload={_v:1,_src:'dayplanner',date:iso(),dayStart:'08:00',loc:'',blocks:[],custom:[]};
+    const r=await fetch(API+'/b',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Master-Key':k},
+      body:JSON.stringify(testPayload)
+    });
+    if(!r.ok){const t=await r.text();throw new Error(r.status+': '+t)}
+    const data=await r.json();
+    // Store the key and the bin we just created
+    localStorage.setItem(LK,k);
+    loadIdx();
+    idx[iso()]=data.metadata.id;
+    saveIdx();
+    curDate=iso();
+    curBin=data.metadata.id;
+    day={...testPayload};
+    startApp(true);
+  }catch(e){
+    console.error('Setup error:',e);
+    err.textContent='Could not connect ('+e.message+'). Check your Master Key and try again.';
+    err.classList.remove('hidden');
+    btn.textContent='Connect & Start';btn.disabled=false;key='';
+  }
+}
+
+function startApp(skipLoad){
+  document.getElementById('setup-wrap').classList.add('hidden');
+  document.getElementById('app-wrap').classList.remove('hidden');
+  if(!skipLoad){loadIdx();loadDay(iso());}
+  else render();
+}
+
+window.addEventListener('load',()=>{
+  key=localStorage.getItem(LK)||'';
+  if(key)startApp();
+  document.getElementById('st-time').addEventListener('change',e=>{day.dayStart=e.target.value;render();sched()});
+  document.getElementById('st-loc').addEventListener('input',e=>{day.loc=e.target.value;sched()});
+  document.getElementById('f-st').addEventListener('change',e=>{
+    const et=document.getElementById('f-et');
+    if(!et.value&&e.target.value){const m=tm(e.target.value);if(m!=null)et.value=mt(Math.min(m+60,23*60+45))}
+  });
+});
+
+function render(){
+  document.getElementById('day-btn').textContent=fmtD(curDate);
+  document.getElementById('st-time').value=day.dayStart||'08:00';
+  document.getElementById('st-loc').value=day.loc||'';
+  const blocks=[...day.blocks].sort((a,b)=>(tm(a.start)||0)-(tm(b.start)||0));
+  const cnt=document.getElementById('cnt-lbl');
+  cnt.textContent=blocks.length?blocks.length+' block'+(blocks.length!==1?'s':'')+' · '+fmtD(curDate):fmtD(curDate);
+  const cont=document.getElementById('tl-blocks');
+  const emp=document.getElementById('tl-empty');
+  const sp=document.getElementById('tl-spine');
+  if(!blocks.length){emp.style.display='';sp.style.display='none';cont.innerHTML='';return}
+  emp.style.display='none';sp.style.display='';
+  const ov=new Set();
+  for(let i=0;i<blocks.length;i++)for(let j=i+1;j<blocks.length;j++){
+    const[aS,aE,bS,bE]=[tm(blocks[i].start),tm(blocks[i].end),tm(blocks[j].start),tm(blocks[j].end)];
+    if(aS!=null&&aE!=null&&bS!=null&&bE!=null&&aS<bE&&aE>bS){ov.add(blocks[i].id);ov.add(blocks[j].id)}
+  }
+  const ds=tm(day.dayStart)||480;
+  let html='';
+  for(let i=0;i<blocks.length;i++){
+    const b=blocks[i],prev=blocks[i-1];
+    const ti=tInfo(b.type),ol=ov.has(b.id),d=dur(b.start,b.end);
+    const pe=prev?tm(prev.end):ds,ts=tm(b.start);
+    if(pe!=null&&ts!=null&&ts>pe+5)html+=`<div class="tl-gap"><span class="tl-gap-lbl">— ${ts-pe} min unscheduled —</span></div>`;
+    html+=`<div class="tl-blk">
+      <div class="tl-tc"><div class="tl-time">${b.start||'?'}</div></div>
+      <div class="tl-dot" style="${ol?'background:#f59e0b;box-shadow:0 0 0 2px #f59e0b':''}"></div>
+      <div class="tl-card ${ol?'tl-ov':''}" onclick="openEdit('${b.id}')">
+        <div class="tl-top">
+          <span class="tl-lbl">${esc(b.label||'Untitled')}</span>
+          ${ol?'<span class="ov-badge">⚠ overlap</span>':''}
+          <span class="tl-badge ${ti.c}">${esc(ti.l)}</span>
+        </div>
+        ${b.end?`<div class="tl-dur">Until ${b.end}${d?' · '+d:''}</div>`:''}
+        ${b.notes?`<div class="tl-note">${esc(b.notes)}</div>`:''}
+      </div>
+    </div>`;
+  }
+  cont.innerHTML=html;
+}
+
+function openAdd(){
+  editId=null;
+  document.getElementById('blk-title').textContent='Add Block';
+  document.getElementById('save-btn').textContent='Add block';
+  document.getElementById('del-btn').style.display='none';
+  const last=[...day.blocks].sort((a,b)=>(tm(b.end)||0)-(tm(a.end)||0))[0];
+  document.getElementById('f-st').value=last?.end||day.dayStart||'08:00';
+  document.getElementById('f-et').value='';
+  document.getElementById('f-lbl').value='';
+  document.getElementById('f-notes').value='';
+  selType='normal';renderGrid();
+  document.getElementById('blk-modal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('f-lbl').focus(),150);
+}
+function openEdit(id){
+  const b=day.blocks.find(x=>x.id===id);if(!b)return;
+  editId=id;
+  document.getElementById('blk-title').textContent='Edit Block';
+  document.getElementById('save-btn').textContent='Save changes';
+  document.getElementById('del-btn').style.display='';
+  document.getElementById('f-lbl').value=b.label||'';
+  document.getElementById('f-st').value=b.start||'';
+  document.getElementById('f-et').value=b.end||'';
+  document.getElementById('f-notes').value=b.notes||'';
+  selType=b.type||'normal';renderGrid();
+  document.getElementById('blk-modal').classList.remove('hidden');
+}
+function saveBlock(){
+  const label=document.getElementById('f-lbl').value.trim();
+  if(!label){document.getElementById('f-lbl').focus();return}
+  const b={label,start:document.getElementById('f-st').value,end:document.getElementById('f-et').value,type:selType,notes:document.getElementById('f-notes').value.trim()};
+  if(editId){const i=day.blocks.findIndex(x=>x.id===editId);if(i>=0)day.blocks[i]={...day.blocks[i],...b}}
+  else day.blocks.push({id:uid(),...b});
+  cm('blk-modal');render();sched();
+}
+function delBlock(){
+  if(!editId||!confirm('Delete this block?'))return;
+  day.blocks=day.blocks.filter(b=>b.id!==editId);
+  cm('blk-modal');render();sched();
+}
+
+function renderGrid(){
+  const g=document.getElementById('type-grid');
+  g.innerHTML=allT().map(t=>`<button class="chip ${t.c} ${selType===t.id?'on':''}" onclick="setSel('${t.id}')">${esc(t.l)}</button>`).join('')+
+    `<button class="add-chip" onclick="openCust()">+ Add type</button>`;
+}
+function setSel(id){selType=id;renderGrid()}
+function openCust(){document.getElementById('cust-inp').value='';document.getElementById('cust-modal').classList.remove('hidden');setTimeout(()=>document.getElementById('cust-inp').focus(),150)}
+function saveCust(){
+  const n=document.getElementById('cust-inp').value.trim();if(!n)return;
+  if(!day.custom.includes(n))day.custom.push(n);
+  selType='cx-'+n;cm('cust-modal');renderGrid();
+}
+
+function openDayModal(){
+  const dates=Object.keys(idx).sort().reverse();
+  const list=document.getElementById('day-list');
+  list.innerHTML=dates.length?dates.map(d=>`<div class="day-item ${d===curDate?'active':''}" onclick="switchDay('${d}')"><span style="font-weight:600;font-size:14px">${fmtD(d)}</span><span style="font-size:12px;color:var(--text2)">${d}</span></div>`).join('')
+    :'<p style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">No saved days yet.</p>';
+  document.getElementById('day-modal').classList.remove('hidden');
+}
+async function switchDay(d){cm('day-modal');await loadDay(d)}
+async function newDay(){
+  const d=prompt('Date (YYYY-MM-DD):',iso());
+  if(!d||!/^\d{4}-\d{2}-\d{2}$/.test(d))return;
+  if(idx[d]){await switchDay(d);return}
+  curDate=d;curBin=null;day={date:d,dayStart:'08:00',loc:'',blocks:[],custom:[]};render();ss('idle','New day — not yet saved');
+}
+
+function exportJson(){
+  const sorted=[...day.blocks].sort((a,b)=>(tm(a.start)||0)-(tm(b.start)||0));
+  const p={_version:1,_source:'willbill-dayplanner',date:curDate,day_start_time:day.dayStart,day_location:day.loc,exported_at:new Date().toISOString(),
+    blocks:sorted.map(b=>({id:b.id,label:b.label,start:b.start,end:b.end,type:b.type,type_label:tInfo(b.type).l,notes:b.notes||''}))};
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(p,null,2)],{type:'application/json'})),download:`dayplan-${curDate}.json`});
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+function cm(id){document.getElementById(id).classList.add('hidden')}
+function bgc(e,id){if(e.target===document.getElementById(id))cm(id)}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')['blk-modal','day-modal','cust-modal'].forEach(cm);
+  if(e.key==='Enter'&&!document.getElementById('blk-modal').classList.contains('hidden')&&document.activeElement.tagName!=='TEXTAREA')saveBlock();
+});
+</script>
+</body>
+</html>
