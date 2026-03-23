@@ -273,10 +273,15 @@ async function loadDay(date){
 }
 
 async function setupSave(){
-  const k=document.getElementById('setup-key').value.trim();
+  // Clean the key - remove any whitespace, quotes, or accidental prefix text
+  let k=document.getElementById('setup-key').value.trim().replace(/^["']|["']$/g,'');
+  // If user copied something like "X-Master-Key: $2b$..." strip the header name
+  if(k.includes(':'))k=k.split(':').slice(1).join(':').trim();
+  document.getElementById('setup-key').value=k;
   const err=document.getElementById('setup-err');
   err.classList.add('hidden');
   if(!k){err.textContent='Please enter your API key';err.classList.remove('hidden');return}
+  if(!k.startsWith('$')){err.textContent='Key should start with $ — make sure you copied the full Master Key from the API Keys page';err.classList.remove('hidden');return}
   const btn=document.getElementById('setup-btn');btn.textContent='Connecting…';btn.disabled=true;
   try{
     key=k;
@@ -300,7 +305,7 @@ async function setupSave(){
     startApp(true);
   }catch(e){
     console.error('Setup error:',e);
-    err.textContent='Could not connect ('+e.message+'). Check your Master Key and try again.';
+    err.textContent='Could not connect ('+e.message+'). Key used starts with: '+k.slice(0,8)+'… — make sure you copied the full Master Key (not Access Key) from jsonbin.io API Keys page.';
     err.classList.remove('hidden');
     btn.textContent='Connect & Start';btn.disabled=false;key='';
   }
